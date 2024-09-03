@@ -6,7 +6,7 @@ This script is designed to find a vanity nostr npub of your choice.
 
 ### Usage
 
-You need to isntall the nostr python dependencies before running trhe script
+You need to install the nostr python dependencies before running the script
 
 ```
 pip install nostr
