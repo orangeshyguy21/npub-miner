@@ -30,15 +30,27 @@ def main() :
 
     # Ask the user to input their desired vanity npub 
     # and run some methods to error handle their input
-    npub_selection = input("Enter your desired vanity npub: npub1")
-    checkNpubSelectionLength(npub_selection) # checking valid length
-    checkNpubSelectionBase58(npub_selection) # checking valid characters
+    npub_selection = None
+    while npub_selection is None:
+        npub_selection = input("Enter your desired vanity npub: npub1")
+        try:
+            checkNpubSelectionLength(npub_selection) # checking valid length
+            checkNpubSelectionBase58(npub_selection) # checking valid characters
+        except ValueError as e:
+            npub_selection = None
+            print(e)
 
     # Ask the user to input their desired thread count
     # and then run some methods to error handle the thread selection
-    thread_selection_str = input("Enter your desired number of worker threads [1-24]: ")
-    thread_selection = getThreadSelectionNumber(thread_selection_str) # check if threads is a number
-    checkThreadSelectionSize(thread_selection) # check if thread number is in range
+    thread_selection = None
+    while thread_selection is None:
+        thread_selection_str = input("Enter your desired number of worker threads [1-24]: ")
+        try:
+            thread_selection = getThreadSelectionNumber(thread_selection_str) # check if threads is a number
+            checkThreadSelectionSize(thread_selection) # check if thread number is in range
+        except ValueError as e:
+            thread_selection = None
+            print(e)
 
     # Assign some variables used in the worker threads 
     max_execution_limits = [100,4000,200000,11000000,700000000,40000000000,2200000000000] # execution max limiter array
@@ -62,7 +74,7 @@ def main() :
         processes.append(p)
 
     # Alert the terminal to the running processes
-    print("running...")
+    print("\nrunning...\n")
 
     # Wait for each worker thread to finish
     for p in processes:
@@ -80,29 +92,30 @@ def main() :
 # Only allow values less than 8. The work required for longer matches gets large fast.
 def checkNpubSelectionLength(npub_selection : str) -> None:
     if len(npub_selection) > 7:
-       raise ValueError("You don't have a super computer. Try again")
+        raise ValueError("\nYou don't have a super computer. Try again\n")
+
 
 # Check to make sure the vanity npub is valid. It must conform to bech32 rules.
 # (@todo) this sould ne expanded out so it is more user friendly 
 # (no [i] is allowed use one [1] instead, no [o] is allowed use zero [0] instead )
 def checkNpubSelectionBase58(npub_selection : str) -> None:
-    pattern = r"^[2346789a-zA-Z0-9](?!.*[biol])[\d\w]*$"
+    pattern = r"^[2346789a-z0-9](?!.*[1biol])[\d\w]*$"
     if not re.match(pattern, npub_selection):
-        raise ValueError("Your npub must conform to bech32 encoding rules. ")
+        raise ValueError("\nYour npub must conform to bech32 encoding rules.\nNo special characters\nNo uppercase letters\nNone of these lowercase letters [b, i, o, l]\nNone of these numbers [1]\n")
 
 # Return the threads normaized to a value, throw an error if it is not an integer
 def getThreadSelectionNumber(thread_selection : str) -> int:
     try:
         threads = int(thread_selection)
     except ValueError:
-        raise ValueError("Threads must be a number between [1-24]")
+        raise ValueError("\nThreads must be a number between [1-24]\n")
     return threads
 
 # Check if the thread count is within the acceptable range
 # (@todo) make these values constants that can be changed at file head
 def checkThreadSelectionSize(thread_selection : int ) -> None:
     if thread_selection < 1 or thread_selection > 24:
-        raise ValueError("Threads must be a number between [1-24]")
+        raise ValueError("\nThreads must be a number between [1-24]\n")
 
 
 ###############################################################################  
@@ -151,9 +164,10 @@ def task(stop_signal, match, limit, counter, progress_alerts):
 
         # check if any alerts need to be triggered
         for i in range(10, 90 + 10, 10):
-            if( current_count / limit > 0.1 and progress_alerts[f"p_{i}"].value == 0 ):
-                progress_alerts[f"p_{i}"].value = 1
-                print(f"{i}% exhausted")
+            if( current_count / limit > (i/100) and progress_alerts[f"p_{i}"].value == 0 ):
+                with progress_alerts[f"p_{i}"].get_lock():
+                    progress_alerts[f"p_{i}"].value = 1
+                    print(f"{i}% exhausted")
         
     # check if the max limit has been reached
     if ( current_count == limit ):
