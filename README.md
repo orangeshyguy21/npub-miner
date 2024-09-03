@@ -13,7 +13,10 @@ pip install nostr
 ```
 
 
-To run this script run in a terminal
+To generate an npub 
+1. download this repository somewhere on your machine
+2. make sure you are in the directory where keygen.py exists 
+3. run in a terminal
 
 ```
 python3 keygen.py
@@ -23,20 +26,21 @@ python3 keygen.py
 
 ### Vanity Npub
 
-You will be asked to enter your choice of npub. All public keys start with *npub1* 
+You will be asked to enter your npub of choice. All public keys start with *npub1* 
 * Valid lengths are 1 to 7.
 * Vanity choices must only contain valid characters (no b,i,o,l)
 
+ex.
 ```
 npub1n0str
 ```
 
-### Worker Trheads
+### Worker Threads
 
 You will also be asked to enter the number of worker threads to use.
-This is how many "checkers" you will run at the same time. The specifications of your computer determine how many you can spawn reliably.
+This is how many checking functions you will run simultaneously. More threads equals less waiting time. 
+Don't be too greedy, especially if you have a destitute computer.
 * Valid entries are 1-24
-
 
 ## Output
 
