@@ -99,9 +99,9 @@ def checkNpubSelectionLength(npub_selection : str) -> None:
 # (@todo) this sould ne expanded out so it is more user friendly 
 # (no [i] is allowed use one [1] instead, no [o] is allowed use zero [0] instead )
 def checkNpubSelectionBase58(npub_selection : str) -> None:
-    pattern = r"^[2346789a-z0-9](?!.*[1biol])[\d\w]*$"
+    pattern = r"^[2346789a-z0-9](?!.*[1bio])[\d\w]*$"
     if not re.match(pattern, npub_selection):
-        raise ValueError("\nYour npub must conform to bech32 encoding rules.\nNo special characters\nNo uppercase letters\nNone of these lowercase letters [b, i, o, l]\nNone of these numbers [1]\n")
+        raise ValueError("\nYour npub must conform to bech32 encoding rules.\nNo special characters\nNo uppercase letters\nNone of these lowercase letters [b, i, o]\nNone of these numbers [1]\n")
 
 # Return the threads normaized to a value, throw an error if it is not an integer
 def getThreadSelectionNumber(thread_selection : str) -> int:
