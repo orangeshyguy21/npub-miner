@@ -54,7 +54,7 @@ def main() :
 
     # Assign some variables used in the worker threads 
     # max_execution_limits = [100,4000,200000,11000000,700000000,40000000000,2200000000000] # execution max limiter array
-        max_execution_limits = [100,4000,200000,1100000,700000000,40000000000,2200000000000] # execution max limiter array
+    max_execution_limits = [100,4000,200000,110000,700000000,40000000000,2200000000000] # execution max limiter array
     npub = "npub1" + npub_selection # concat the prefix onto the users vanity selection
     max_execution_limit = max_execution_limits[len(npub_selection)-1] # the max executions limit
     processes = [] # the container for the threaded processes
@@ -153,7 +153,7 @@ def task(stop_signal, match, limit, counter, progress_alerts):
     stop_index = len(match)
 
     # Print initial energy bar
-    print("0% exhausted | Energy: [██████████]", end="\r")
+    print("[██████████] | 100% remaining", end="\r")
 
     # primary while loop that keeps running until
     # a) a match is found from this thread
@@ -180,11 +180,11 @@ def task(stop_signal, match, limit, counter, progress_alerts):
                     # Update energy bar in place
                     energy_remaining = 10 - (i // 10)
                     energy_bar = "█" * energy_remaining + "░" * (10 - energy_remaining)
-                    print(f"{i}% exhausted | Energy: [{energy_bar}]", end="\r")
+                    print(f"[{energy_bar}] | {100 - i}% remaining", end="\r")
         
     # check if the max limit has been reached
     if ( current_count == limit ):
-        print(f"100% exhausted - no find | Energy: [░░░░░░░░░░]")
+        print(f"[░░░░░░░░░░] | 0% remaining - no find")
         print() # Add a newline after the final status
 
     # check if a match was found and print to consol
@@ -194,7 +194,7 @@ def task(stop_signal, match, limit, counter, progress_alerts):
         remaining_percent = 100 - int((current_count / limit) * 100)
         energy_blocks = remaining_percent // 10
         energy_bar = "█" * energy_blocks + "░" * (10 - energy_blocks)
-        print(f"It's a match! | Energy: [{energy_bar}]")
+        print(f"[{energy_bar}] | {remaining_percent}% remaining - It's a match!")
         print() # Add a newline after the final status
         print(f"Public key: {public_key.bech32()}")
         print(f"Private key: {private_key.bech32()}")
