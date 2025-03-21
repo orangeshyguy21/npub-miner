@@ -55,7 +55,7 @@ def main() :
     # Assign some variables used in the worker threads 
     max_execution_limits = [100,4000,200000,11000000,700000000,40000000000,2200000000000] # execution max limiter array
     npub = "npub1" + npub_selection # concat the prefix onto the users vanity selection
-    max_execution_limit = max_execution_limits[len(npub_selection)] # the max executions limit
+    max_execution_limit = max_execution_limits[len(npub_selection)-1] # the max executions limit
     processes = [] # the container for the threaded processes
 
     # Assing some variables that need to be tracked between threads

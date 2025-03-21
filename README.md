@@ -9,7 +9,7 @@ This script is designed to find a vanity nostr npub of your choice.
 You need to install the nostr python dependencies before running the script
 
 ```
-pip install nostr
+pip install -r requirements.txt
 ```
 
 
