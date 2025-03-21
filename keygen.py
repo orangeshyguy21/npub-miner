@@ -53,7 +53,8 @@ def main() :
             print(e)
 
     # Assign some variables used in the worker threads 
-    max_execution_limits = [100,4000,200000,11000000,700000000,40000000000,2200000000000] # execution max limiter array
+    # max_execution_limits = [100,4000,200000,11000000,700000000,40000000000,2200000000000] # execution max limiter array
+        max_execution_limits = [100,4000,200000,1100000,700000000,40000000000,2200000000000] # execution max limiter array
     npub = "npub1" + npub_selection # concat the prefix onto the users vanity selection
     max_execution_limit = max_execution_limits[len(npub_selection)-1] # the max executions limit
     processes = [] # the container for the threaded processes
@@ -151,6 +152,9 @@ def task(stop_signal, match, limit, counter, progress_alerts):
     # index at which we stop caring what the values are (not a part of the vanity choice)
     stop_index = len(match)
 
+    # Print initial energy bar
+    print("0% exhausted | Energy: [██████████]", end="\r")
+
     # primary while loop that keeps running until
     # a) a match is found from this thread
     # b) the max limit is reached
@@ -173,17 +177,25 @@ def task(stop_signal, match, limit, counter, progress_alerts):
             if( current_count / limit > (i/100) and progress_alerts[f"p_{i}"].value == 0 ):
                 with progress_alerts[f"p_{i}"].get_lock():
                     progress_alerts[f"p_{i}"].value = 1
-                    print(f"{i}% exhausted")
+                    # Update energy bar in place
+                    energy_remaining = 10 - (i // 10)
+                    energy_bar = "█" * energy_remaining + "░" * (10 - energy_remaining)
+                    print(f"{i}% exhausted | Energy: [{energy_bar}]", end="\r")
         
     # check if the max limit has been reached
     if ( current_count == limit ):
-        print(f"100% exhausted - no find")
+        print(f"100% exhausted - no find | Energy: [░░░░░░░░░░]")
+        print() # Add a newline after the final status
 
     # check if a match was found and print to consol
     if ( first_chars[0:stop_index] == match ):
         stop_signal.value = 1
-        print(f"It's a match!")
-        print(f"")
+        # Calculate remaining energy when match is found
+        remaining_percent = 100 - int((current_count / limit) * 100)
+        energy_blocks = remaining_percent // 10
+        energy_bar = "█" * energy_blocks + "░" * (10 - energy_blocks)
+        print(f"It's a match! | Energy: [{energy_bar}]")
+        print() # Add a newline after the final status
         print(f"Public key: {public_key.bech32()}")
         print(f"Private key: {private_key.bech32()}")
 
