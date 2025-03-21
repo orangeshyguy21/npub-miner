@@ -25,6 +25,7 @@
 from nostr.key import PrivateKey # nostr key generation package
 import multiprocessing # package for multiprocessing
 import re # pacakge for evaluating regex
+import time
 
 def main() : 
 
@@ -82,10 +83,13 @@ def main() :
         for p in processes:
             p.join()
     except KeyboardInterrupt:
+        stop_signal.value = 1
+        time.sleep(0.5)
         for p in processes:
             if p.is_alive():
                 p.terminate()
                 p.join(timeout=1.0)
+        print("All processes terminated.")
         return
 
 
@@ -159,53 +163,57 @@ def task(stop_signal, match, limit, counter, progress_alerts, best_match):
     # a) a match is found from this thread
     # b) the max limit is reached
     # c) a match is found from a child thread
-    while ( found != True) and (counter.value < limit) and (stop_signal.value != 1):
+    while (found != True) and (counter.value < limit) and (stop_signal.value != 1):
+        try:
+            # lock the global counter and update it
+            with counter.get_lock():
+                counter.value += 1
+                current_count = counter.value
+            private_key = PrivateKey() # randomly generated private key (nsec)
+            public_key = private_key.public_key # randomly generated public key (npub)
+            first_chars = public_key.bech32()[0:stop_index].lower() # characters to check for a match
 
-        # lock the global counter and update it
-        with counter.get_lock():
-            counter.value += 1
-            current_count = counter.value
-        private_key = PrivateKey() # randomly generated private key (nsec)
-        public_key = private_key.public_key # randomly generated public key (npub)
-        first_chars = public_key.bech32()[0:stop_index].lower() # characters to check for a match
+             # was a match found on this npub?
+            found = bool(first_chars[0:stop_index] == match) 
 
-         # was a match found on this npub?
-        found = bool(first_chars[0:stop_index] == match) 
-
-        # update the best match if the current npub is better
-        current_match_length = 0
-        for i in range(stop_index):
-            if i >= len(first_chars) or first_chars[i] != match[i]:
-                break
-            current_match_length += 1
-            
-        best_match_str = best_match.value.decode('utf-8').strip()
-        best_match_length = 0
-        
-        if best_match_str:
+            # update the best match if the current npub is better
+            current_match_length = 0
             for i in range(stop_index):
-                if i >= len(best_match_str) or best_match_str[i] != match[i]:
+                if i >= len(first_chars) or first_chars[i] != match[i]:
                     break
-                best_match_length += 1
-        
-        if current_match_length > best_match_length:
-            with best_match.get_lock(): 
-                best_match.value = public_key.bech32().encode('utf-8')
-            progress_percent = (current_count / limit) * 100
-            energy_remaining = 10 - int(progress_percent // 10)
-            energy_bar = "█" * energy_remaining + "░" * (10 - energy_remaining)
-            print(f"[{energy_bar}] | Best match: {public_key.bech32()}", end="\r")
+                current_match_length += 1
+            
+            best_match_str = best_match.value.decode('utf-8').strip()
+            best_match_length = 0
+            
+            if best_match_str:
+                for i in range(stop_index):
+                    if i >= len(best_match_str) or best_match_str[i] != match[i]:
+                        break
+                    best_match_length += 1
+            
+            if current_match_length > best_match_length:
+                with best_match.get_lock(): 
+                    best_match.value = public_key.bech32().encode('utf-8')
+                progress_percent = (current_count / limit) * 100
+                energy_remaining = 10 - int(progress_percent // 10)
+                energy_bar = "█" * energy_remaining + "░" * (10 - energy_remaining)
+                print(f"[{energy_bar}] | Best match: {public_key.bech32()}", end="\r")
 
-        # check if any alerts need to be triggered
-        for i in range(10, 90 + 10, 10):
-            if( current_count / limit > (i/100) and progress_alerts[f"p_{i}"].value == 0 ):
-                with progress_alerts[f"p_{i}"].get_lock():
-                    progress_alerts[f"p_{i}"].value = 1
-                    # Update energy bar in place
-                    energy_remaining = 10 - (i // 10)
-                    energy_bar = "█" * energy_remaining + "░" * (10 - energy_remaining)
-                    print(f"[{energy_bar}] | Best match: {best_match.value.decode('utf-8')}", end="\r")
-        
+            # check if any alerts need to be triggered
+            for i in range(10, 90 + 10, 10):
+                if( current_count / limit > (i/100) and progress_alerts[f"p_{i}"].value == 0 ):
+                    with progress_alerts[f"p_{i}"].get_lock():
+                        progress_alerts[f"p_{i}"].value = 1
+                        # Update energy bar in place
+                        energy_remaining = 10 - (i // 10)
+                        energy_bar = "█" * energy_remaining + "░" * (10 - energy_remaining)
+                        print(f"[{energy_bar}] | Best match: {best_match.value.decode('utf-8')}", end="\r")
+            
+        except KeyboardInterrupt:
+            # Handle KeyboardInterrupt within the task
+            return
+
     # check if the max limit has been reached
     if ( current_count == limit ):
         print(f"[░░░░░░░░░░] | Best match: {best_match.value.decode('utf-8')}")
