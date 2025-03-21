@@ -76,10 +76,16 @@ def main() :
     # Alert the terminal to the running processes
     print("\nrunning...\n")
 
-    # Wait for each worker thread to finish
-    for p in processes:
-        p.join()
-    
+    # Wait for each worker thread to finish, catch a keyboard interrupt and terminate the threads
+    try:
+        for p in processes:
+            p.join()
+    except KeyboardInterrupt:
+        for p in processes:
+            if p.is_alive():
+                p.terminate()
+                p.join(timeout=1.0)
+        return
 
 
 ###############################################################################  
@@ -132,7 +138,7 @@ def checkThreadSelectionSize(thread_selection : int ) -> None:
 # @progress_alerts : all terminal alerts for tracking progress alerts to the terminal
 
 def task(stop_signal, match, limit, counter, progress_alerts):
-
+    
     # leading characters to track run (same length as user selection)
     first_chars = ""
 
@@ -183,5 +189,7 @@ def task(stop_signal, match, limit, counter, progress_alerts):
 
 
 if __name__ == "__main__":
-
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nMiner terminated.")
