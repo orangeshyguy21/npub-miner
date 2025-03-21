@@ -53,8 +53,7 @@ def main() :
             print(e)
 
     # Assign some variables used in the worker threads 
-    # max_execution_limits = [100,4000,200000,11000000,700000000,40000000000,2200000000000] # execution max limiter array
-    max_execution_limits = [100,4000,200000,110000,700000000,40000000000,2200000000000] # execution max limiter array
+    max_execution_limits = [100,4000,200000,11000000,700000000,40000000000,2200000000000] # execution max limiter array
     npub = "npub1" + npub_selection # concat the prefix onto the users vanity selection
     max_execution_limit = max_execution_limits[len(npub_selection)-1] # the max executions limit
     processes = [] # the container for the threaded processes
@@ -62,6 +61,7 @@ def main() :
     # Assing some variables that need to be tracked between threads
     counter = multiprocessing.Value('i', 0) # total executions counter
     stop_signal = multiprocessing.Value('i', 0) # exit signal for the while loops in the threads
+    best_match = multiprocessing.Array('c', 100) # best match found so far - byte array with space for npub
 
     # Define dict for tracking completion progress so we can update the terminal with progress updates
     progress_alerts = {}
@@ -70,7 +70,7 @@ def main() :
 
     # Create the desired number of worker threads and append them to the processes array
     for index in range(thread_selection):
-        p = multiprocessing.Process(target=task, args=(stop_signal, npub, max_execution_limit, counter, progress_alerts))
+        p = multiprocessing.Process(target=task, args=(stop_signal, npub, max_execution_limit, counter, progress_alerts, best_match))
         p.start()
         processes.append(p)
 
@@ -138,7 +138,7 @@ def checkThreadSelectionSize(thread_selection : int ) -> None:
 # @counter : total executions counter
 # @progress_alerts : all terminal alerts for tracking progress alerts to the terminal
 
-def task(stop_signal, match, limit, counter, progress_alerts):
+def task(stop_signal, match, limit, counter, progress_alerts, best_match):
     
     # leading characters to track run (same length as user selection)
     first_chars = ""
@@ -153,7 +153,7 @@ def task(stop_signal, match, limit, counter, progress_alerts):
     stop_index = len(match)
 
     # Print initial energy bar
-    print("[██████████] | 100% remaining", end="\r")
+    print("[██████████] | Best match: ", end="\r")
 
     # primary while loop that keeps running until
     # a) a match is found from this thread
@@ -167,10 +167,34 @@ def task(stop_signal, match, limit, counter, progress_alerts):
             current_count = counter.value
         private_key = PrivateKey() # randomly generated private key (nsec)
         public_key = private_key.public_key # randomly generated public key (npub)
-        first_chars = public_key.bech32()[0:stop_index].lower() # characters to check for a match 
+        first_chars = public_key.bech32()[0:stop_index].lower() # characters to check for a match
 
-        # was a match found on this npub?
-        found = bool(first_chars[0:stop_index] == match)
+         # was a match found on this npub?
+        found = bool(first_chars[0:stop_index] == match) 
+
+        # update the best match if the current npub is better
+        current_match_length = 0
+        for i in range(stop_index):
+            if i >= len(first_chars) or first_chars[i] != match[i]:
+                break
+            current_match_length += 1
+            
+        best_match_str = best_match.value.decode('utf-8').strip()
+        best_match_length = 0
+        
+        if best_match_str:
+            for i in range(stop_index):
+                if i >= len(best_match_str) or best_match_str[i] != match[i]:
+                    break
+                best_match_length += 1
+        
+        if current_match_length > best_match_length:
+            with best_match.get_lock(): 
+                best_match.value = public_key.bech32().encode('utf-8')
+            progress_percent = (current_count / limit) * 100
+            energy_remaining = 10 - int(progress_percent // 10)
+            energy_bar = "█" * energy_remaining + "░" * (10 - energy_remaining)
+            print(f"[{energy_bar}] | Best match: {public_key.bech32()}", end="\r")
 
         # check if any alerts need to be triggered
         for i in range(10, 90 + 10, 10):
@@ -180,11 +204,11 @@ def task(stop_signal, match, limit, counter, progress_alerts):
                     # Update energy bar in place
                     energy_remaining = 10 - (i // 10)
                     energy_bar = "█" * energy_remaining + "░" * (10 - energy_remaining)
-                    print(f"[{energy_bar}] | {100 - i}% remaining", end="\r")
+                    print(f"[{energy_bar}] | Best match: {best_match.value.decode('utf-8')}", end="\r")
         
     # check if the max limit has been reached
     if ( current_count == limit ):
-        print(f"[░░░░░░░░░░] | 0% remaining - no find")
+        print(f"[░░░░░░░░░░] | Best match: {best_match.value.decode('utf-8')}")
         print() # Add a newline after the final status
 
     # check if a match was found and print to consol
@@ -194,7 +218,7 @@ def task(stop_signal, match, limit, counter, progress_alerts):
         remaining_percent = 100 - int((current_count / limit) * 100)
         energy_blocks = remaining_percent // 10
         energy_bar = "█" * energy_blocks + "░" * (10 - energy_blocks)
-        print(f"[{energy_bar}] | {remaining_percent}% remaining - It's a match!")
+        print(f"[{energy_bar}] | Match Found!                                                                  ")
         print() # Add a newline after the final status
         print(f"Public key: {public_key.bech32()}")
         print(f"Private key: {private_key.bech32()}")
